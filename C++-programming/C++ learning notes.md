@@ -344,7 +344,114 @@ ss >> i;            // 输出到 int 变量
 
 
 
-### stl算法
+#### list 双向链表
+
+**核心特点**：内存不连续（节点通过指针相连），**任意位置**插入删除极快（$O(1)$），但不支持随机访问（不能用 `[]` 或 `.at()`）。
+
+##### 独有/特定注意事项
+
+- **不支持随机访问**：只能通过迭代器 `it++` 或 `it--` 移动，不能写 `it + 5`。
+
+- 成员函数 sort()：
+
+  list 无法使用全局的 sort（随机访问迭代器设计），必须使用 list 自身的成员函数。
+
+  ```c++
+  list<int> L = {4, 1, 3, 9};
+  L.sort();             // 默认升序
+  L.sort(greater<int>()); // 降序
+  ```
+
+- 接合操作 splice()：
+
+  可以将一个 list 的元素直接“剪切”并“接合”到另一个 list 中，不涉及元素拷贝，效率极高。
+
+  ```c++
+  list<int> list1 = {1, 2, 3};
+  list<int> list2 = {10, 20};
+  
+  // 将 list2 所有元素移动到 list1 的头部
+  list1.splice(list1.begin(), list2); 
+  // 此时 list1: {10, 20, 1, 2, 3}, list2 为空
+  ```
+
+
+
+#### map字典
+
+**核心特点**：底层为**红黑树**，所有元素自动按 **Key** 升序排序。存储 `pair<Key, Value>` 类型。
+
+##### 数据的插入与访问
+
+插入数据
+
+主要有两种方式：使用 pair 插入或使用 []。
+
+```c++
+map<string, int> m;
+// 1. insert 插入 pair
+m.insert(make_pair("Alice", 100));
+
+// 2. 数组下标方式插入 (若 Key 不存在则创建，若存在则修改)
+m["Bob"] = 90; 
+```
+
+**访问数据与陷阱**
+
+- operator[]：
+
+  `cout << m["Tom"];`
+
+  如果 "Tom" 不存在，map 会自动创建一个 Key 为 "Tom"，Value 为 0 (默认值) 的元素。如果只是想查找，千万不要用 []。
+
+- at()：
+
+  m.at("Tom")：如果不存在会抛出异常。
+
+##### 查找操作
+
+使用 `find(key)` 代替全局算法，效率为 $O(\log N)$。
+
+```c++
+auto it = m.find("Alice");
+if (it != m.end()) 
+    cout << "Found: " << it->first << " Score: " << it->second << endl;
+else 
+    cout << "Not Found" << endl;
+```
+
+
+
+#### set集合
+
+**核心特点**：底层为**红黑树**，自动排序，只存 Key（Key 即 Value）。常用于**去重**和**自动排序**。
+
+##### 核心操作
+
+**去重技巧**
+
+将 vector 扔进 set，再倒回来，即可实现去重+排序。
+
+```c++
+vector<int> v = {1, 3, 1, 2, 5};
+set<int> s(v.begin(), v.end()); // 此时 s: {1, 2, 3, 5}
+```
+
+**自定义排序**
+
+默认是从小到大，若需从大到小，需在定义时指定仿函数。
+
+```c++
+set<int, greater<int> > s; // 从大到小排序
+```
+
+**查找元素**
+
+`s.count(key)`：查找是否有元素key，若有，返回1，没有返回0
+
+
+
+### stl算法(头文件*algorithm*)
 
 #### 排序函数sort()
 
@@ -388,9 +495,16 @@ bool cmp(const pair<string,int>& a,const pair<string,int>& b)
 
 #### 累加函数accumulate()
 
-对容器内所有数据求和，使用时需包含头文件***numeric***和使用std namespace，后传入三个参数，第一个为起始元素迭代器，第二个为结束元素迭代器（不包含该元素），第三个为累计的初始值（即开始操作之前的值）
+需包含头文件***numeric***对容器内所有数据求和，后传入三个参数，第一个为起始元素迭代器，第二个为结束元素迭代器（不包含该元素），第三个为累计的初始值（即开始操作之前的值）
 
-ps. 若在三个元素之后再传入一个二元操作函数，则可以用此二元操作函数代替默认的累加操作（将前面操作（累加）完成得到的数与下一个数进行二元操作）
+对于第三个参数：
+
+- 传入 `0` $\rightarrow$ 返回 `int`
+- 传入 `0LL` $\rightarrow$ 返回 `long long`
+- 传入 `0.0` $\rightarrow$ 返回 `double`
+- 传入 `string("")` $\rightarrow$ 返回 `string`
+
+ps. 若在三个元素之后再传入一个二元操作函数（有返回值，返回值作为与下一个元素进行二元操作的参数），则可以用此二元操作函数代替默认的累加操作（将前面操作（累加）完成得到的数与下一个数进行的二元操作）
 
 ```c++
 	vector<int> nums = {1, 2, 3, 4, 5};
@@ -399,16 +513,32 @@ ps. 若在三个元素之后再传入一个二元操作函数，则可以用此�
 ```
 
 ```c++
-	vector<int> nums = {1, 2, 3, 4};
-    int product = accumulate(nums.begin(), nums.end(), 1, multiplies<int>());
-    cout << "乘积：" << product << endl; // 1*2*3*4 = 24
+struct Student {
+    string name;
+    int score;
+};
+
+int sumScore(int total, const Student& s) {
+    return total + s.score; 
+}
+
+int main() {
+    vector<Student> classA = {
+        {"Alice", 80},
+        {"Bob", 90},
+        {"Tom", 100}
+    };
+
+    int totalScore = accumulate(classA.begin(), classA.end(), 0, sumScore);
+    return 0;
+}
 ```
 
 
 
 #### 转换操作函数transform()
 
-对容器内一定范围数据进行一定操作并储存到另一个位置，使用时需包含头文件***algorithm***和使用std namespace，后传入四个参数，第一个为起始元素迭代器，第二个为结束元素迭代器，第三个为操作后的结果储存开始的位置的迭代器，第四个为操作函数
+对容器内一定范围数据进行一定操作并储存到另一个位置，后传入四个参数，第一个为起始元素迭代器，第二个为结束元素迭代器，第三个为操作后的结果储存开始的位置的迭代器，第四个为操作函数
 
 ```c++
 char toLowerChar(unsigned char c) 
@@ -423,6 +553,75 @@ int main()
     cout << text << endl; // 输出: hello world!
     return 0;
 }
+```
+
+
+
+#### 反转函数 reverse()
+
+将容器指定范围内的元素倒序，会直接在原容器上操作。后传入两个参数，分别为操作范围的起始迭代器和终止迭代器。
+
+```c++
+string s = "abcdef";
+reverse(s.begin(), s.end()); 
+// s 变为 "fedcba"
+```
+
+
+
+#### 查找函数 find() / find_if()
+
+查找容器内满足条件的第一个元素，返回值均为找到的元素的迭代器，若找不到则返回（`end()`），后传入三个参数，前两个都是查找范围的起始迭代器和终止迭代器，对于**find()**，第三个参数是需要查找的值，对于**find_if()**，第三个参数是满足的条件
+
+- `find(begin, end, value)`：找到第一个值为***value***的元素。
+- `find_if(begin, end, pred)`：找到第一个满足pred条件的元素。
+
+```c++
+vector<int> v = {10, 20, 30, 40};
+auto it = find(v.begin(), v.end(), 30);
+
+if (it != v.end()) 
+    cout << "找到位置下标: " << it - v.begin() << endl; // 输出 2
+else 
+    cout << "未找到" << endl;
+```
+
+条件查找：提前声明一个bool函数作为条件传入
+
+```c++
+bool isGreaterThanFive(int val)
+{
+    return val > 5;
+}
+
+vector<int> v = {1, 3, 4, 6, 8};
+auto it = find_if(v.begin(), v.end(), isGreaterThanFive)
+```
+
+
+
+#### 统计函数 count() / count_if()
+
+统计容器内满足条件的元素个数，返回值均为统计个数，后传入三个参数，耆那两个均为查找范围的其实迭代器和终止迭代器，对于**count()**，第三个参数是需要统计的元素的值，对于**count_if()**，第三个参数是需要统计的元素需要满足的的条件
+
+- `count(begin, end, value)`：统计等于 value 的元素个数。
+- `count_if(begin, end, pred)`：统计满足条件 pred 的元素个数。
+
+```c++
+vector<int> v = {10, 20, 10, 30};
+int n = count(v.begin(), v.end(), 10); // n = 2
+```
+
+条件统计：提前声明一个bool函数作为条件传入
+
+```c++
+bool isGreaterThanFive(int val)
+{
+    return val > 5;
+}
+
+vector<int> v = {1, 3, 4, 6, 8};
+auto it = count_if(v.begin(), v.end(), isGreaterThanFive)
 ```
 
 
