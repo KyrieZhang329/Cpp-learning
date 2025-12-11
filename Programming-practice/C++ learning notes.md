@@ -806,7 +806,7 @@ class Polygon
 class Triangle:public Polygon
 {
     public:
-    	void draw()
+    	void draw() override  //override:关键字，明确表示在重写覆盖父类虚函数
         {
             cout<<"三角形"<<endl;
         }
@@ -815,7 +815,7 @@ class Triangle:public Polygon
 class Rectangle:public Polygon
 {
     public:
-    	void draw()
+    	void draw() override
         {
             cout<<"长方形"<<endl;
         }
