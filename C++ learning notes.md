@@ -665,6 +665,82 @@ int main()
 
 
 
+### 构造函数与析构函数
+
+对象的“出生”与“离世”，由系统自动调用，主要负责数据的初始化和内存的清理工作。
+
+#### 构造函数
+
+对象创建时**自动调用**，用于初始化成员变量。
+
+**语法特点**：
+
+- 函数名与**类名相同**。
+- **无返回值**（连 `void` 都不写）。
+- **可以重载**（可以写多个构造函数，参数不同）。
+
+**两种常用写法**：
+
+1. **普通构造**：在函数体内赋值。
+2. **初始化列表**（推荐）：在参数列表后用冒号 `:` 连接，效率更高，且是某些类型（如引用、常量）初始化的唯一方式。
+
+```c++
+class Person {
+public:
+    string name;
+    int age;
+
+    // 1. 无参构造（默认构造）
+    Person() {
+        name = "Unknown";
+        age = 0;
+    }
+
+    // 2. 有参构造 + 初始化列表语法
+    // 语法：构造函数(参数) : 属性1(值), 属性2(值) { ... }
+    Person(string n, int a) : name(n), age(a) {
+        cout << name << " 出生了！" << endl;
+    }
+};
+
+int main() {
+    Person p1;             // 调用无参构造
+    Person p2("Tom", 18);  // 调用有参构造
+}
+```
+
+#### 析构函数 
+
+对象销毁前（如离开作用域、被 delete）**自动调用**，用于释放内存（堆区资源）、关闭文件等善后工作。
+
+**语法特点**：
+
+- 函数名为 `~类名` （前面加波浪号）。
+- **无返回值**，**无参数**。
+- 不能重载（一个类只能有一个析构函数）。
+
+```c++
+class Person {
+public:
+    int* data;
+
+    Person() {
+        data = new int(10); // 构造时申请堆区内存
+    }
+
+    // 析构函数
+    ~Person() {
+        if (data != nullptr) {
+            delete data; // 析构时必须手动释放堆区内存，否则内存泄漏
+            data = nullptr;
+        }
+        cout << "对象被销毁，内存已释放" << endl;
+    }
+};
+```
+
+
+
 ### 类的三大特性：封装、多态、继承
 
 #### 封装
@@ -717,7 +793,7 @@ class example
 **头文件**中用于存放类的定义（成员属性和成员函数的声明），并在头部添加相应预编译指令防止重复包含，并去掉所有成员函数的实现部分，以分号结尾
 
 ```c++
-#pragma once
+#pragma once（防止重复包含）
 
  class example
 {
@@ -837,6 +913,78 @@ int main()
 多边形
 三角形
 长方形
+```
+
+#### 虚析构函数 (配合多态使用)
+
+**痛点**：当使用父类指针指向子类对象时（多态），如果父类析构函数不加 `virtual`，删除父类指针时**只会调用父类的析构函数，不会调用子类的析构函数**，导致子类内存泄漏。
+
+**原则**：**若类可能作为父类被继承，务必将析构函数声明为 `virtual`。**
+
+```c++
+class Base {
+public:
+    // 加上 virtual，确保子类析构函数也会被调用
+    virtual ~Base() {
+        cout << "Base 析构" << endl;
+    }
+};
+
+class Derived : public Base {
+public:
+    ~Derived() {
+        cout << "Derived 析构" << endl;
+    }
+};
+
+int main() {
+    Base* p = new Derived();
+    delete p; 
+    // 若 Base 析构无 virtual：只输出 "Base 析构" (子类泄漏)
+    // 若 Base 析构有 virtual：先输出 "Derived 析构" 再输出 "Base 析构" (安全)
+}
+```
+
+
+
+
+
+### 运算符重载
+
+赋予C++标准运算符（如 `+`, `==`, `<<`, `->` 等）对自定义数据类型（类/结构体）进行操作的能力。
+
+**基本语法**：`返回值类型 operator运算符(参数列表) { ... }`
+
+#### 仿指针重载（* / ->）
+
+常用于**智能指针**或**代理模式**，让类对象模仿裸指针的行为。
+
+- **operator\***：返回被管理对象的引用（`Type&`）。
+- **operator->**：返回被管理对象的指针（`Type*`）。
+
+```c++
+class MySmartPtr {
+private:
+    Student* ptr;
+public:
+    MySmartPtr(Student* p) : ptr(p) {}
+    ~MySmartPtr() { if(ptr) delete ptr; }
+
+    // 重载 *：解引用，为了能使用 *p
+    Student& operator*() {
+        return *ptr;
+    }
+
+    // 重载 ->：指针指向，为了能使用 p->score
+    Student* operator->() {
+        return ptr;
+    }
+};
+
+// 使用
+MySmartPtr p(new Student("Alice", 90));
+cout << p->name;  // 等价于 p.operator->()->name
+cout << (*p).score;
 ```
 
 
