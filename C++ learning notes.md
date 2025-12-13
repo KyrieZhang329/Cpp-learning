@@ -237,6 +237,90 @@ char* c = reinterpret_cast<char*>(p); // 将 int 指针强转为 char 指针
 
 
 
+### const关键字
+
+用于定义常量，核心作用是**“承诺不改变”**，能提高代码安全性和编译优化。
+
+#### 基础用法
+
+修饰普通变量，定义时必须初始化，后续不可修改。
+
+```c++
+const int MAX_VAL = 100;
+// MAX_VAL = 200; // 报错：表达式必须是可修改的左值
+```
+
+#### 指针与const (口诀：左定值，右定向)
+
+根据 `const` 在 `*` 号的左边还是右边来区分锁定的是**内容**还是**地址**。
+
+- **`const` 在 `\*` 左边**：**指针指向的内容**不可改 
+- **`const` 在 `\*` 右边**：**指针本身**不可改
+
+```c++
+int a = 10, b = 20;
+
+// 1. 常量指针 (底层 const)
+const int* p1 = &a; 
+// *p1 = 30;  // 错误：数据不可改
+p1 = &b;      // 正确：指针指向可以改
+
+// 2. 指针常量 (顶层 const)
+int* const p2 = &a;
+*p2 = 30;     // 正确：数据可以改
+// p2 = &b;   // 错误：指针指向不可改
+
+// 3. 双重锁定
+const int* const p3 = &a; // 数据和指向都不能改
+```
+
+#### 函数参数 (const引用)
+
+工程中最常用。用于防止函数内部修改参数，同时配合**引用**避免大对象拷贝。
+
+- **传值**：`void func(const int i)` 保护局部变量不被修改。
+- **传引用**：`void func(const string& s)` **高效且安全**。
+
+```c++
+struct Student { string name; int age; };
+
+// 推荐写法：既省去了拷贝构造的开销，又保证了数据安全
+void printStudent(const Student& s) {
+    // s.age = 20; // 错误：只读引用
+    cout << s.name << endl;
+}
+```
+
+#### 类成员函数 (const修饰函数)
+
+放在参数列表后，表示该函数**不修改成员变量**。
+
+- **位置**：`void func() const {}`
+- **原理**：此时 `this` 指针变为 `const ClassName* const`。
+- **限制**：`const` 对象只能调用 `const` 成员函数。
+
+```c++
+class Circle {
+    int r;
+public:
+    // 只读操作，必须加 const
+    int getArea() const {
+        return 3.14 * r * r;
+    }
+    
+    // 修改操作，不能加 const
+    void setR(int r) {
+        this->r = r;
+    }
+};
+
+const Circle c;
+c.getArea(); // 正确
+// c.setR(5); // 错误：常量对象不能调用非const成员函数
+```
+
+
+
 ## STL库
 
 ### stl容器
