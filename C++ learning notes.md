@@ -1427,3 +1427,94 @@ system("clear"); // Linux/Mac清屏
 
 
 
+## 工程构建 (CMake)
+
+CMake 是一个跨平台的自动化构建系统，通过 `CMakeLists.txt` 文件生成标准的构建文件
+
+### 基础构建流程 
+
+为了保持源码目录整洁，推荐在独立的 build 文件夹中进行编译（**外部构建**）。
+
+**操作步骤：**
+
+1.  在项目根目录下新建 build 文件夹：`mkdir build`
+2.  进入该文件夹：`cd build`
+3.  生成构建文件（指向上级目录）：`cmake ..`
+4.  编译可执行文件：`make` 
+
+### CMakeLists.txt 核心指令
+
+文件名必须严格区分大小写，且必须命名为 **CMakeLists.txt**。
+
+#### 1. 基础三件套
+
+一个最简项目的必备指令。
+
+```cmake
+# 1. 指定 CMake 最低版本要求
+cmake_minimum_required(VERSION 3.10)
+
+# 2. 定义项目名称
+project(MyProject)
+
+# 3. 生成可执行文件
+# 语法：add_executable(程序名 源文件1 源文件2 ...)
+add_executable(App main.cpp)
+```
+
+#### 2. 配置 C++ 标准
+
+指定编译器使用 C++11, C++17 等标准，通常写在 `project` 指令下方。
+
+```cmake
+# 设置 C++ 标准为 C++17
+set(CMAKE_CXX_STANDARD 17)
+# 强制要求标准（非必须，但推荐）
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+```
+
+### 多文件与自动化管理
+
+当源文件较多时，手动罗列文件名效率太低，可使用变量和搜索指令。
+
+#### 自动搜索源文件
+
+使用 `aux_source_directory` 扫描指定目录下的所有源文件。
+
+```cmake
+# 语法：aux_source_directory(目录路径 变量名)
+# 扫描当前目录(.)下的所有源文件，并将列表存储在变量 SRC_LIST 中
+aux_source_directory(. SRC_LIST)
+
+# 使用变量生成可执行文件 (取变量值需加 ${})
+add_executable(App ${SRC_LIST})
+```
+
+### 库的操作
+
+用于将代码封装为库文件，或链接第三方库。
+
+#### 生成静态库
+
+将源文件编译为 `.lib` (Windows) 或 `.a` (Linux) 静态库，而不是可执行程序。
+
+```cmake
+# 语法：add_library(库名 STATIC 源文件)
+add_library(MathLib STATIC math_func.cpp)
+```
+
+#### 链接库文件
+
+将库（Library）“挂载”到主程序（Executable）上。
+
+```cmake
+# 1. 生成库
+add_library(MathLib STATIC math_func.cpp)
+
+# 2. 生成主程序
+add_executable(App main.cpp)
+
+# 3. 链接：告诉 App 需要使用 MathLib
+# 语法：target_link_libraries(目标 权限 库名)
+target_link_libraries(App PUBLIC MathLib)
+```
