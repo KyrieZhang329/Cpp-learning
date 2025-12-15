@@ -1257,6 +1257,225 @@ int main() {
 
 
 
+
+
+## C++11 以后的核心特性
+
+### auto 关键字
+
+**核心特点**：让编译器在编译期根据初始值自动推导变量类型。主要用于简化长类型名（如迭代器）的书写。
+
+#### 基础用法
+
+必须初始化，否则无法推导。
+
+```c++
+auto a = 10;        // a 为 int
+auto b = 3.14;      // b 为 double
+auto ptr = &a;      // ptr 为 int*
+```
+
+#### 简化迭代器书写
+
+这是 `auto` 最常用的场景，替代冗长的 STL 迭代器类型。
+
+```c++
+vector<string> v;
+// 原写法：vector<string>::iterator it = v.begin();
+auto it = v.begin(); 
+```
+
+#### 范围 for 循环 (Range-based for loop)
+
+配合 `auto` 遍历容器更加便捷。
+
+```c++
+vector<int> nums = {1, 2, 3};
+
+// 拷贝遍历（无法修改原容器）
+for(auto n : nums) {
+    cout << n << endl;
+}
+
+// 引用遍历（推荐，可修改原容器，避免拷贝）
+for(auto& n : nums) {
+    n++; 
+}
+```
+
+#### 注意事项
+
+- **引用和 const 的丢失**：`auto` 默认推导的是值类型，会忽略顶层 `const` 和引用 `&`。
+  - 若需要引用：`auto&`
+  - 若需要不可改引用：`const auto&`
+
+```c++
+int x = 0;
+int& y = x;
+
+auto z = y; // z 是 int (引用被忽略，发生了拷贝)
+z = 10;     // 修改 z 不影响 x
+
+auto& w = y; // w 是 int& (保留引用)
+w = 10;      // 修改 w 同时修改了 x
+```
+
+------
+
+### 智能指针 (Smart Pointers)
+
+**核心特点**：RAII（资源获取即初始化）思想的体现。封装了原始指针，**自动管理内存释放**，杜绝内存泄漏。需包含头文件 ***memory\***。
+
+#### unique_ptr (独占指针)
+
+**特点**：同一时刻只能有一个指针指向该对象，**禁止拷贝**，只允许移动（move）。
+
+```c++
+// 创建：推荐使用 make_unique (C++14)
+unique_ptr<int> p1 = make_unique<int>(10);
+
+// unique_ptr<int> p2 = p1; // 报错：禁止拷贝
+unique_ptr<int> p2 = move(p1); // 正确：所有权转移，p1 变为空
+```
+
+#### shared_ptr (共享指针)
+
+**特点**：多个指针可以指向同一个对象。内部维护一个**引用计数**，每多一个指针指向计数+1，析构一次计数-1，计数为0时释放内存。
+
+```c++
+// 创建：推荐使用 make_shared
+shared_ptr<int> p1 = make_shared<int>(100);
+cout << p1.use_count(); // 计数: 1
+
+{
+    shared_ptr<int> p2 = p1; // 共享所有权
+    cout << p1.use_count(); // 计数: 2
+} // 离开作用域，p2 析构，计数-1
+
+cout << p1.use_count(); // 计数: 1
+```
+
+#### weak_ptr (弱指针)
+
+**特点**：辅助 `shared_ptr` 工作，只观测不拥有，**不增加引用计数**。
+
+**用途**：主要用于解决 `shared_ptr` 的**循环引用**（Circular Reference）导致内存无法释放的问题（即 A 指向 B，B 指向 A，计数永不为 0）。
+
+```c++
+shared_ptr<int> sp = make_shared<int>(10);
+weak_ptr<int> wp = sp; // 不增加计数
+
+// 使用时需先检查是否有效，并转化为 shared_ptr
+if (auto locked_sp = wp.lock()) { // lock() 返回一个 shared_ptr
+    cout << *locked_sp << endl;
+}
+```
+
+------
+
+### Lambda 表达式
+
+**核心特点**：匿名函数对象，常用于编写临时的、局部的回调函数，特别是在 STL 算法（如 `sort`, `for_each`）中。
+
+#### 语法格式
+
+```
+[捕获列表](参数列表) -> 返回值类型 { 函数体 }
+```
+
+- **参数列表**、**返回值类型** 可以省略（若编译器能推导）。
+
+#### 捕获列表 (Capture List)
+
+决定了 Lambda 内部如何访问外部的局部变量。
+
+- `[]`：不捕获任何外部变量。
+- `[=]`：**按值捕获**所有外部变量（只读，无法修改）。
+- `[&]`：**按引用捕获**所有外部变量（可读写，需注意生命周期）。
+- `[this]`：捕获当前类对象的 `this` 指针。
+- `[x, &y]`：混合模式，x 按值，y 按引用。
+
+#### 实战演练
+
+**配合 sort 使用**
+
+```c++
+struct Student { string name; int score; };
+vector<Student> classA = { {"Tom", 60}, {"Jerry", 90} };
+
+// 按成绩降序排序
+sort(classA.begin(), classA.end(), [](const Student& a, const Student& b) {
+    return a.score > b.score;
+});
+```
+
+**按值捕获 vs 按引用捕获**
+
+```c++
+int a = 10;
+// 按值捕获 (mutable 允许在 lambda 内部修改拷贝的值，不影响外部)
+auto f1 = [a]() mutable { 
+    a++; 
+    cout << a; // 输出 11
+};
+f1();
+cout << a; // 输出 10 (外部未变)
+
+// 按引用捕获
+auto f2 = [&a]() {
+    a++;
+};
+f2();
+cout << a; // 输出 11 (外部被修改)
+```
+
+------
+
+### 函数包装器 (std::function)
+
+**核心特点**：通用多态函数封装器。它可以存储、复制和调用任何**可调用对象**（普通函数、Lambda、函数指针、仿函数）。需包含头文件 ***functional\***。
+
+#### 定义语法
+
+```c++
+function<返回值类型(参数类型1, 参数类型2...)> 变量名
+```
+
+#### 基础用法
+
+统一不同类型的可调用对象，常用于**回调函数**的设计。
+
+```c++
+#include <functional>
+
+// 1. 普通函数
+int add(int a, int b) { return a + b; }
+
+// 2. 函数对象 (仿函数)
+struct Minus 
+{
+    int operator()(int a, int b) { return a - b; }
+};
+
+int main() 
+{
+    // 包装普通函数
+    function<int(int, int)> func1 = add;
+    
+    // 包装 Lambda
+    function<int(int, int)> func2 = [](int a, int b) { return a * b; };
+    
+    // 包装仿函数
+    function<int(int, int)> func3 = Minus();
+
+    cout << func1(10, 5) << endl; // 15
+    cout << func2(10, 5) << endl; // 50
+    cout << func3(10, 5) << endl; // 5
+}
+```
+
+
+
 ## 常见头文件
 
 ### 头文件***cstring*** (操作C风格字符串)
