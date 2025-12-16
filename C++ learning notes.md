@@ -15,6 +15,13 @@ char arr[100];
 cin.getline(arr,100)
 ```
 
+若读取的为一个string类型字符串
+
+```c++
+string str;
+getline(cin,str);
+```
+
 
 
 ### 数字和字母字符操作
