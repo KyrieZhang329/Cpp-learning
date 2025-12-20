@@ -458,7 +458,7 @@ c.getArea(); // 正确
 
 - **返回值**：`size_t` 类型，若未找到返回 `string::npos`。
 - **查找**：
-  - `s.find(str, pos)` / `s.rfind(str, pos)`：正向/反向查找。
+  - `s.find(str, pos)` / `s.rfind(str, pos)`：正向/反向查找。（pos，开始查找的起始位置）
   - `s.find_first_of(str)` / `s.find_last_of(str)`：查找 str 中**任意字符**在s中出现的位置。
 - **替换**：
   - `s.replace(pos, len, "str")`：替换 `[pos, pos+len)` 范围的内容。
