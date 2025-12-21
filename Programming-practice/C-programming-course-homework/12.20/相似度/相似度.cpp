@@ -8,8 +8,9 @@ using namespace std;
 
 void to_lower(string& str)
 {
-    for(size_t i = 0; i < str.size(); i++)
-        str[i] = tolower(str[i]);
+    transform(str.begin(),str.end(),str.begin(),
+    [](const unsigned char& a){return tolower(a);}
+);
 }
 
 int main()
